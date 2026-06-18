@@ -318,24 +318,67 @@ if (-not $NoWebUI) {
         } else {
             $webuiDir = "$RIOHome\webui"
             New-Item -ItemType Directory -Force -Path $webuiDir | Out-Null
+
+            # Generate secret key
+            $secretKey = if (Get-Command "openssl" -ErrorAction SilentlyContinue) {
+                openssl rand -hex 32
+            } else {
+                -join ((48..57) + (65..90) + (97..122) | Get-Random -Count 64 | % {[char]$_})
+            }
+
+            # .env file
+            @"
+WEBUI_SECRET_KEY=$secretKey
+WEBUI_NAME=Rio Lab
+SCARF_NO_ANALYTICS=true
+DO_NOT_TRACK=true
+ANONYMIZED_TELEMETRY=false
+ENABLE_SIGNUP=true
+DEFAULT_LOCALE=en
+DEFAULT_MODELS=$modelId
+SAFE_MODE=true
+"@ | Out-File -FilePath "$webuiDir\.env" -Encoding ASCII
+
+            # docker-compose.yml
             @"
 services:
   open-webui:
     image: ghcr.io/open-webui/open-webui:main
     container_name: rio-webui
+    restart: unless-stopped
     ports:
       - "3000:8080"
+    env_file:
+      - .env
     environment:
-      - OPENAI_API_BASE_URL=http://host.docker.internal:8080/v1
-      - WEBUI_NAME=Rio Lab
-      - ENABLE_SIGNUP=false
+      OPENAI_API_BASE_URL: http://host.docker.internal:8080/v1
+      OPENAI_API_KEY: ""
     volumes:
-      - ./data:/app/backend/data
-    restart: unless-stopped
+      - rio_webui_data:/app/backend/data
+    healthcheck:
+      test: ["CMD-SHELL", "curl -sf http://localhost:8080/health || exit 1"]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+
+volumes:
+  rio_webui_data:
 "@ | Out-File -FilePath "$webuiDir\docker-compose.yml" -Encoding ASCII
+
             Write-Done "Open WebUI configured"
-            Write-Info "  docker compose -f $webuiDir\docker-compose.yml up -d"
-            Write-Info "  Open http://localhost:3000"
+
+            if (Confirm-Prompt "Start Open WebUI now?" "y") {
+                Write-Info "Starting Open WebUI..."
+                docker compose -f "$webuiDir\docker-compose.yml" up -d
+                Write-Done "Open WebUI started at http://localhost:3000"
+            } else {
+                Write-Info "To start later:"
+                Write-Info "  docker compose -f $webuiDir\docker-compose.yml up -d"
+                Write-Info "  Open http://localhost:3000"
+            }
         }
     }
 }

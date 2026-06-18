@@ -206,8 +206,8 @@ if ! $RIO_SKIP_WEBUI; then
   echo ""
 
   if confirm "Would you like to set up Open WebUI?"; then
-    source "$SCRIPT_DIR/scripts/setup-webui.sh"
-    setup_webui
+    log_info "Running Open WebUI setup..."
+    bash "$SCRIPT_DIR/scripts/setup-webui.sh"
     log_success "Open WebUI setup complete"
   else
     log_info "Skipping Open WebUI. You can set it up later with:"
