@@ -1,0 +1,23 @@
+[Unit]
+Description=llama.cpp LLM Server (Rio Lab)
+After=network.target
+
+[Service]
+Type=simple
+User=%i
+ExecStart={{LLAMA_SERVER_PATH}} \
+  --model {{MODEL_PATH}} \
+  --host {{HOST}} \
+  --port {{PORT}} \
+  --n-gpu-layers 999 \
+  --ctx-size 8192 \
+  --temp 0.6 \
+  --top-p 0.95 \
+  --top-k 40 \
+  --threads {{THREADS}}
+
+Restart=on-failure
+RestartSec=5
+
+[Install]
+WantedBy=default.target
