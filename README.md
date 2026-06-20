@@ -70,7 +70,6 @@ Turns out — you can. llama.cpp is an engineering marvel that runs on anything 
 | `install.sh` | Full automated installer — one command does everything |
 | `install.ps1` | Windows PowerShell installer |
 | `uninstall.sh` | Clean removal |
-| `uninstall.ps1` | Windows clean removal |
 
 ### Detection (`scripts/`)
 

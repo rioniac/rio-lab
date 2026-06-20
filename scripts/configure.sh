@@ -41,8 +41,29 @@ configure() {
   fi
 
   # ─── rio.env ───────────────────────────────────────────────────────
-  log_info "Generating environment config..."
-  cat > "$config_dir/rio.env" << ENVEOF
+  local env_template=""
+  if [[ -f "$rio_home/../configs/rio.env.template" ]]; then
+    env_template="$rio_home/../configs/rio.env.template"
+  elif [[ -f "configs/rio.env.template" ]]; then
+    env_template="configs/rio.env.template"
+  fi
+
+  if [[ -n $env_template ]] && [[ -f $env_template ]]; then
+    log_info "Generating environment config..."
+    render_template "$env_template" "$config_dir/rio.env" \
+      "LLAMA_SERVER_PATH" "$llama_server" \
+      "MODEL_PATH" "$model_path" \
+      "HOST" "$host" \
+      "PORT" "$port" \
+      "LOCAL_ENDPOINT" "$endpoint" \
+      "MODEL_ID" "$model_id" \
+      "RIO_HOME" "$rio_home" \
+      "RIO_MODELS_DIR" "$models_dir" \
+      "RIO_CONFIG_DIR" "$config_dir"
+    log_success "Created: $config_dir/rio.env"
+  else
+    log_info "Generating environment config..."
+    cat > "$config_dir/rio.env" << ENVEOF
 # Rio Lab Configuration
 # Source this file in your shell: source $config_dir/rio.env
 
@@ -59,7 +80,8 @@ RIO_PORT="$port"
 LOCAL_ENDPOINT="$endpoint"
 export LOCAL_ENDPOINT
 ENVEOF
-  log_success "Created: $config_dir/rio.env"
+    log_success "Created: $config_dir/rio.env"
+  fi
 
   # ─── Launcher Script ──────────────────────────────────────────────
   log_info "Generating launcher script..."

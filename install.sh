@@ -281,7 +281,7 @@ echo -e "${RIO_GREEN}${RIO_BOLD}╚═══════════════
 echo ""
 echo -e "${RIO_BOLD}Your local AI lab is ready!${RIO_RESET}"
 echo ""
-echo "  📍  llama-server endpoint: http://127.0.0.1:8080/v1"
+echo "  📍  llama-server endpoint: http://127.0.0.1:$RIO_PORT/v1"
 echo "  💬  Chat UI:               http://127.0.0.1:$RIO_PORT"
 echo "  🤖  Model:                 $RIO_SUGGESTED_MODEL_NAME"
 echo "  ⌨️   OpenCode:             $(opencode --version 2>/dev/null || echo 'installed')"

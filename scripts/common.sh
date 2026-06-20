@@ -40,8 +40,12 @@ log_debug()   { [[ -n "${RIO_DEBUG:-}" ]] && echo -e "${RIO_CYAN}🔍${RIO_RESET
 check_previous() {
   local exit_code=$?
   local message="${1:-Previous command failed}"
+  local mode="${2:-}"
   if [[ $exit_code -ne 0 ]]; then
     log_error "$message"
+    if [[ "$mode" == "no-exit" ]]; then
+      return "$exit_code"
+    fi
     exit "$exit_code"
   fi
 }
