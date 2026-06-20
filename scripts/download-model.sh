@@ -52,11 +52,7 @@ download_model() {
     fi
 
     log_info "Downloading with progress..."
-    if [[ -n ${total_size:-} ]]; then
-      curl -#fL "$url" -o "$dest_path"
-    else
-      curl -#fL "$url" -o "$dest_path"
-    fi
+    curl -#fL "$url" -o "$dest_path"
   elif command -v wget &>/dev/null; then
     wget --show-progress -qO "$dest_path" "$url"
   else

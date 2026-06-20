@@ -1,0 +1,9 @@
+# ShellCheck configuration for Rio Lab
+# https://www.shellcheck.net/wiki/
+
+# Follow sourced scripts
+source-path=SCRIPTDIR
+
+# Disabled checks:
+# SC1091 — Not following sourced files (can't resolve at lint time)
+disable=SC1091

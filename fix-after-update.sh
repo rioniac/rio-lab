@@ -63,8 +63,10 @@ log_step "3/4 — Rebuilding llama.cpp"
 RIO_HOME="${RIO_HOME:-$HOME/rio-lab}"
 if [[ -d "$RIO_HOME/llama.cpp/build" ]]; then
   log_info "Rebuilding llama.cpp from source..."
-  cd "$RIO_HOME/llama.cpp"
-  cmake --build build --config Release -j "$(nproc)"
+  (
+    cd "$RIO_HOME/llama.cpp"
+    cmake --build build --config Release -j "$(nproc)"
+  )
   check_previous "Rebuild failed"
 
   # Reinstall systemd service if it exists

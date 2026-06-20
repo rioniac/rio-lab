@@ -94,8 +94,19 @@ install_llamacpp_binary() {
   fi
 
   tar -xJf "$tmpdir/llama.tar.xz" -C "$tmpdir"
-  cp "$tmpdir"/llama-server "$install_dir/" 2>/dev/null || true
-  cp "$tmpdir"/llama-cli "$install_dir/" 2>/dev/null || true
+
+  # Find llama-server in extracted files (may be at root or in a subdirectory)
+  local server_bin
+  server_bin=$(find "$tmpdir" -name "llama-server" -type f | head -1)
+  if [[ -n "$server_bin" ]]; then
+    cp "$server_bin" "$install_dir/llama-server"
+    # Also copy llama-cli if present
+    local cli_bin
+    cli_bin=$(find "$tmpdir" -name "llama-cli" -type f | head -1)
+    if [[ -n "$cli_bin" ]]; then
+      cp "$cli_bin" "$install_dir/llama-cli"
+    fi
+  fi
   chmod +x "$install_dir"/llama-* 2>/dev/null || true
   rm -rf "$tmpdir"
 

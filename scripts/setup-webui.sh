@@ -62,6 +62,8 @@ install_docker() {
   case "${RIO_OS:-linux}" in
     linux|wsl)
       log_info "Running official Docker install script..."
+      # SECURITY NOTE: piping curl to sh is the official Docker install method.
+      # See https://docs.docker.com/engine/install/ for manual alternatives.
       curl -fsSL https://get.docker.com | sh
       check_previous "Docker install failed"
 

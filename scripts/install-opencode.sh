@@ -81,6 +81,9 @@ install_opencode_linux() {
   # Fallback: curl install script
   if command -v curl &>/dev/null; then
     log_info "Running: curl -fsSL https://opencode.ai/install | bash"
+    # SECURITY NOTE: piping curl to bash executes the remote script directly.
+    # This is the official OpenCode install method. Review the script first at:
+    #   curl -fsSL https://opencode.ai/install
     curl -fsSL https://opencode.ai/install | bash
     check_previous "OpenCode install script failed" "no-exit"
 
@@ -108,6 +111,7 @@ install_opencode_macos() {
     brew install anomalyco/tap/opencode
   elif command -v curl &>/dev/null; then
     log_info "Installing via install script..."
+    # SECURITY NOTE: piping curl to bash — see comment in install_opencode_linux
     curl -fsSL https://opencode.ai/install | bash
   else
     log_error "Need brew or curl to install OpenCode on macOS"

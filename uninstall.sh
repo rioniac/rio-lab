@@ -11,12 +11,14 @@ show_banner
 
 log_step "Rio Lab — Uninstall"
 
+RIO_HOME="${RIO_HOME:-$HOME/rio-lab}"
+
 log_warning "This will remove all Rio Lab components:"
-echo "  • llama.cpp installation (~/rio-lab/llama.cpp)"
-echo "  • Downloaded models (~/rio-lab/models)"
-echo "  • Configuration files (~/rio-lab/config)"
-echo "  • Launcher scripts (~/rio-lab/)"
-echo "  • Open WebUI data (~/rio-lab/webui)"
+echo "  • llama.cpp installation ($RIO_HOME/llama.cpp)"
+echo "  • Downloaded models ($RIO_HOME/models)"
+echo "  • Configuration files ($RIO_HOME/config)"
+echo "  • Launcher scripts ($RIO_HOME/)"
+echo "  • Open WebUI data ($RIO_HOME/webui)"
 echo "  • systemd services"
 echo ""
 
@@ -48,8 +50,6 @@ pkill -f "llama-server" 2>/dev/null || true
 
 # ─── Remove Rio Lab directory ────────────────────────────────────────
 log_step "Removing Rio Lab files"
-
-RIO_HOME="${RIO_HOME:-$HOME/rio-lab}"
 
 if [[ -d "$RIO_HOME" ]]; then
   # Confirm model deletion separately (they're large downloads)

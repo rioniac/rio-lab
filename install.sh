@@ -46,7 +46,7 @@ detect_platform
 detect_gpu
 
 # ─── Banner ─────────────────────────────────────────────────────────────
-clear
+[[ -t 1 ]] && clear
 show_banner
 
 echo -e "${RIO_BOLD}Welcome to Rio Lab!${RIO_RESET}"
@@ -122,7 +122,7 @@ if ! $RIO_SKIP_CONFIRM && [[ ${#RIO_AVAILABLE_MODELS[@]} -gt 1 ]]; then
   if ! confirm "Use recommended model: $RIO_SUGGESTED_MODEL_NAME?"; then
     echo ""
     prompt_value RIO_MODEL_CHOICE "Enter model number" "1"
-    local idx=$((RIO_MODEL_CHOICE - 1))
+    idx=$((RIO_MODEL_CHOICE - 1))
     if [[ $idx -ge 0 ]] && [[ $idx -lt ${#RIO_AVAILABLE_MODELS[@]} ]]; then
       RIO_SUGGESTED_HF_REPO="${RIO_AVAILABLE_HF_REPOS[$idx]}"
       RIO_SUGGESTED_FILENAME="${RIO_AVAILABLE_FILENAMES[$idx]}"
@@ -218,32 +218,36 @@ fi
 # ─── Verify Setup ─────────────────────────────────────────────────────
 log_step "Verification"
 
-log_info "Starting llama-server to verify setup..."
-"$RIO_LLAMA_SERVER" --model "$RIO_MODEL_PATH" \
-  --host 127.0.0.1 --port 8080 \
-  --n-gpu-layers 999 \
-  --ctx-size 2048 \
-  --temp 0.6 \
-  &>/dev/null &
-local server_pid=$!
+if [[ -n "${RIO_MODEL_PATH:-}" ]] && [[ -f "$RIO_MODEL_PATH" ]]; then
+  log_info "Starting llama-server to verify setup..."
+  "$RIO_LLAMA_SERVER" --model "$RIO_MODEL_PATH" \
+    --host 127.0.0.1 --port 8080 \
+    --n-gpu-layers 999 \
+    --ctx-size 2048 \
+    --temp 0.6 \
+    &>/dev/null &
+  server_pid=$!
 
-sleep 2
-if curl -sf http://127.0.0.1:8080/v1/models > /dev/null 2>&1; then
-  log_success "llama-server is running and responding!"
+  sleep 2
+  if curl -sf http://127.0.0.1:8080/v1/models > /dev/null 2>&1; then
+    log_success "llama-server is running and responding!"
 
-  if command -v opencode &>/dev/null; then
-    log_info "Testing OpenCode connection..."
-    if opencode --version &>/dev/null 2>&1; then
-      log_success "OpenCode is ready!"
+    if command -v opencode &>/dev/null; then
+      log_info "Testing OpenCode connection..."
+      if opencode --version &>/dev/null 2>&1; then
+        log_success "OpenCode is ready!"
+      fi
     fi
+  else
+    log_warning "llama-server started but didn't respond in time"
+    log_info "Check the logs: $RIO_HOME/llama.cpp/build/bin/"
   fi
-else
-  log_warning "llama-server started but didn't respond in time"
-  log_info "Check the logs: $RIO_HOME/llama.cpp/build/bin/"
-fi
 
-kill "$server_pid" 2>/dev/null || true
-wait "$server_pid" 2>/dev/null || true
+  kill "$server_pid" 2>/dev/null || true
+  wait "$server_pid" 2>/dev/null || true
+else
+  log_info "Skipping server verification (no model downloaded)"
+fi
 
 # ─── Success ──────────────────────────────────────────────────────────
 echo ""

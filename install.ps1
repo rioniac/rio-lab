@@ -5,7 +5,7 @@
     Sets up a local LLM (llama.cpp) + OpenCode + Web UI on Windows.
     Supports native Windows and WSL2 modes.
 .PARAMETER Method
-    Install method: binary, wsl (default: binary)
+    Install method: binary (default). WSL2 is auto-detected and delegated to Linux installer.
 .PARAMETER NoWebUI
     Skip Open WebUI setup
 .PARAMETER NoModel
@@ -83,7 +83,7 @@ Write-Info "Architecture: $arch"
 Write-Info "Install dir:  $RIOHome"
 
 # GPU detection via PowerShell
-$gpuInfo = Get-WmiObject Win32_VideoController -ErrorAction SilentlyContinue | Select-Object -First 1
+$gpuInfo = Get-CimInstance Win32_VideoController -ErrorAction SilentlyContinue | Select-Object -First 1
 $gpuVendor = "unknown"
 $gpuName = "Unknown"
 $vramMB = 0
@@ -106,6 +106,10 @@ $models = @(
     @{ Name = "Qwen2.5-Coder-1.5B (Q4_K_M)"; MinVRAM = 2048; HF = "Qwen/Qwen2.5-Coder-1.5B-Instruct-GGUF"; File = "qwen2.5-coder-1.5b-instruct-q4_k_m.gguf" }
     @{ Name = "Qwen2.5-Coder-3B (Q4_K_M)";   MinVRAM = 4096; HF = "Qwen/Qwen2.5-Coder-3B-Instruct-GGUF";   File = "qwen2.5-coder-3b-instruct-q4_k_m.gguf" }
     @{ Name = "Qwen2.5-Coder-7B (Q4_K_M)";   MinVRAM = 6144; HF = "Qwen/Qwen2.5-Coder-7B-Instruct-GGUF";   File = "qwen2.5-coder-7b-instruct-q4_k_m.gguf" }
+    @{ Name = "Qwen2.5-Coder-14B (Q4_K_M)";  MinVRAM = 12288; HF = "Qwen/Qwen2.5-Coder-14B-Instruct-GGUF"; File = "qwen2.5-coder-14b-instruct-q4_k_m.gguf" }
+    @{ Name = "Qwen2.5-Coder-32B (Q4_K_M)";  MinVRAM = 24576; HF = "Qwen/Qwen2.5-Coder-32B-Instruct-GGUF"; File = "qwen2.5-coder-32b-instruct-q4_k_m.gguf" }
+    @{ Name = "DeepSeek-Coder-V2-Lite (Q4_K_M)"; MinVRAM = 8192; HF = "deepseek-ai/DeepSeek-Coder-V2-Lite-Instruct-GGUF"; File = "deepseek-coder-v2-lite-instruct-q4_k_m.gguf" }
+    @{ Name = "CodeGemma-7B (Q4_K_M)";       MinVRAM = 6144; HF = "google/codegemma-7b-it-GGUF";             File = "codegemma-7b-it-q4_k_m.gguf" }
 )
 
 $selectedModel = $models[0]
@@ -179,13 +183,13 @@ if (-not $NoModel) {
             $wc = New-Object System.Net.WebClient
             $wc.DownloadFile($modelUrl, $modelPath)
             $size = (Get-Item $modelPath).Length / 1MB
-            Write-Done "Model downloaded: [math]::Round($size, 1) MB"
+            Write-Done "Model downloaded: $([math]::Round($size, 1)) MB"
         } catch {
             Write-Err "Download failed: $($_.Exception.Message)"
         }
     } else {
         $size = (Get-Item $modelPath).Length / 1MB
-        Write-Info "Model already exists: [math]::Round($size, 1) MB"
+        Write-Info "Model already exists: $([math]::Round($size, 1)) MB"
     }
 }
 

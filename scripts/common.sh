@@ -93,7 +93,7 @@ prompt_value() {
   else
     read -r -p "$prompt: " val
   fi
-  eval "$var_name=\$val"
+  printf -v "$var_name" '%s' "$val"
 }
 
 # ─── System helpers ────────────────────────────────────────────────────

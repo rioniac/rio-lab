@@ -54,8 +54,8 @@ echo "Rio Lab has stopped. You can close this window."
 read -r -p "Press Enter to exit..."
 STEAM
 
-  # Replace placeholder
-  sed -i "s|{{RIO_HOME}}|$rio_home|g" "$steam_launcher"
+  # Render template
+  render_template "$steam_launcher" "$steam_launcher" "RIO_HOME" "$rio_home"
   chmod +x "$steam_launcher"
 
   log_success "Steam launcher created: $steam_launcher"

@@ -20,12 +20,11 @@ configure() {
   mkdir -p "$config_dir" "$models_dir"
 
   # ─── opencode.json ─────────────────────────────────────────────────
+  local template=""
   if [[ -f "$rio_home/../configs/opencode.json.template" ]]; then
-    local template="$rio_home/../configs/opencode.json.template"
+    template="$rio_home/../configs/opencode.json.template"
   elif [[ -f "configs/opencode.json.template" ]]; then
-    local template="configs/opencode.json.template"
-  else
-    local template=""
+    template="configs/opencode.json.template"
   fi
 
   if [[ -n $template ]] && [[ -f $template ]]; then

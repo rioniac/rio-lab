@@ -142,7 +142,7 @@ detect_gpu() {
       total_ram_mb=4096
     fi
 
-    if [[ $RIO_GPU_VENDOR == "amd" ]] || [[ $RIO_GPU_VENDOR == "intel" ]] && [[ $RIO_GPU_DRIVER != "none" ]]; then
+    if { [[ $RIO_GPU_VENDOR == "amd" ]] || [[ $RIO_GPU_VENDOR == "intel" ]]; } && [[ $RIO_GPU_DRIVER != "none" ]]; then
       # Integrated GPU — use 75% of system RAM as usable
       RIO_GPU_VRAM_MB=$(( total_ram_mb * 75 / 100 ))
     else

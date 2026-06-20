@@ -21,20 +21,22 @@ suggest_model() {
   fi
 
   # ─── Model definitions ──────────────────────────────────────────────
-  # Each model: "hf_repo:filename:display_name:min_vram_mb:tools_support"
+  # Each model: "hf_repo|filename|display_name|min_vram_mb|tools_support"
   # Tools support: models known to work well with function calling / tool use
 
   RIO_MODEL_DB=(
-    "Qwen/Qwen2.5-Coder-1.5B-Instruct-GGUF:qwen2.5-coder-1.5b-instruct-q4_k_m.gguf:Qwen2.5-Coder-1.5B (Q4_K_M):2048:yes"
-    "Qwen/Qwen2.5-Coder-3B-Instruct-GGUF:qwen2.5-coder-3b-instruct-q4_k_m.gguf:Qwen2.5-Coder-3B (Q4_K_M):4096:yes"
-    "Qwen/Qwen2.5-Coder-7B-Instruct-GGUF:qwen2.5-coder-7b-instruct-q4_k_m.gguf:Qwen2.5-Coder-7B (Q4_K_M):6144:yes"
-    "Qwen/Qwen2.5-Coder-14B-Instruct-GGUF:qwen2.5-coder-14b-instruct-q4_k_m.gguf:Qwen2.5-Coder-14B (Q4_K_M):12288:yes"
-    "Qwen/Qwen2.5-Coder-32B-Instruct-GGUF:qwen2.5-coder-32b-instruct-q4_k_m.gguf:Qwen2.5-Coder-32B (Q4_K_M):24576:yes"
-    "deepseek-ai/DeepSeek-Coder-V2-Lite-Instruct-GGUF:deepseek-coder-v2-lite-instruct-q4_k_m.gguf:DeepSeek-Coder-V2-Lite (Q4_K_M):8192:yes"
-    "google/codegemma-7b-it-GGUF:codegemma-7b-it-q4_k_m.gguf:CodeGemma-7B (Q4_K_M):6144:yes"
+    "Qwen/Qwen2.5-Coder-1.5B-Instruct-GGUF|qwen2.5-coder-1.5b-instruct-q4_k_m.gguf|Qwen2.5-Coder-1.5B (Q4_K_M)|2048|yes"
+    "Qwen/Qwen2.5-Coder-3B-Instruct-GGUF|qwen2.5-coder-3b-instruct-q4_k_m.gguf|Qwen2.5-Coder-3B (Q4_K_M)|4096|yes"
+    "Qwen/Qwen2.5-Coder-7B-Instruct-GGUF|qwen2.5-coder-7b-instruct-q4_k_m.gguf|Qwen2.5-Coder-7B (Q4_K_M)|6144|yes"
+    "Qwen/Qwen2.5-Coder-14B-Instruct-GGUF|qwen2.5-coder-14b-instruct-q4_k_m.gguf|Qwen2.5-Coder-14B (Q4_K_M)|12288|yes"
+    "Qwen/Qwen2.5-Coder-32B-Instruct-GGUF|qwen2.5-coder-32b-instruct-q4_k_m.gguf|Qwen2.5-Coder-32B (Q4_K_M)|24576|yes"
+    "deepseek-ai/DeepSeek-Coder-V2-Lite-Instruct-GGUF|deepseek-coder-v2-lite-instruct-q4_k_m.gguf|DeepSeek-Coder-V2-Lite (Q4_K_M)|8192|yes"
+    "google/codegemma-7b-it-GGUF|codegemma-7b-it-q4_k_m.gguf|CodeGemma-7B (Q4_K_M)|6144|yes"
   )
 
   # ─── Pick best model ──────────────────────────────────────────────
+  # Model DB is ordered smallest-to-largest. We iterate forward so the last
+  # (i.e. largest) model that fits the detected VRAM wins.
   local best_model=""
   local best_model_name=""
   local best_quant="Q4_K_M"
@@ -43,7 +45,7 @@ suggest_model() {
 
   for entry in "${RIO_MODEL_DB[@]}"; do
     local hf_repo filename display_name min_vram tools
-    IFS=':' read -r hf_repo filename display_name min_vram tools <<< "$entry"
+    IFS='|' read -r hf_repo filename display_name min_vram tools <<< "$entry"
 
     if [[ $vram_mb -ge $min_vram ]]; then
       best_model="$display_name"
@@ -77,7 +79,7 @@ suggest_model() {
   RIO_AVAILABLE_FILENAMES=()
   for entry in "${RIO_MODEL_DB[@]}"; do
     local hf_repo2 filename2 display_name2 min_vram2 tools2
-    IFS=':' read -r hf_repo2 filename2 display_name2 min_vram2 tools2 <<< "$entry"
+    IFS='|' read -r hf_repo2 filename2 display_name2 min_vram2 tools2 <<< "$entry"
     if [[ $vram_mb -ge $min_vram2 ]]; then
       RIO_AVAILABLE_MODELS+=("$display_name2")
       RIO_AVAILABLE_HF_REPOS+=("$hf_repo2")
