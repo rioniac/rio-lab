@@ -68,6 +68,10 @@ mkdir -p ~/rio-lab/models
 curl -fSL https://huggingface.co/Qwen/Qwen2.5-Coder-7B-Instruct-GGUF/resolve/main/qwen2.5-coder-7b-instruct-q4_k_m.gguf \
   -o ~/rio-lab/models/qwen2.5-coder-7b-instruct-q4_k_m.gguf
 
+# Smaller: Qwen2.5-Coder-1.5B (fits 4GB+ VRAM, fastest)
+# curl -fSL https://huggingface.co/Qwen/Qwen2.5-Coder-1.5B-Instruct-GGUF/resolve/main/qwen2.5-coder-1.5b-instruct-q4_k_m.gguf \
+#   -o ~/rio-lab/models/qwen2.5-coder-1.5b-instruct-q4_k_m.gguf
+
 # Or DeepSeek-Coder-V2-Lite (larger, needs 12GB+ VRAM)
 # curl -fSL https://huggingface.co/deepseek-ai/DeepSeek-Coder-V2-Lite-Instruct-GGUF/resolve/main/deepseek-coder-v2-lite-instruct-q4_k_m.gguf \
 #   -o ~/rio-lab/models/deepseek-coder-v2-lite-instruct-q4_k_m.gguf
@@ -191,6 +195,17 @@ systemctl --user enable --now rio-llamacpp.service
 
 ## Troubleshooting
 
+### Model Options
+
+| Model | VRAM Needed | Notes |
+|---|---|---|
+| Qwen2.5-Coder-1.5B Q4_K_M | 2 GB | Fastest, good for low-VRAM |
+| Qwen2.5-Coder-3B Q4_K_M | 4 GB | Good balance of speed/quality |
+| Qwen2.5-Coder-7B Q4_K_M | 6 GB | Recommended for most users |
+| DeepSeek-Coder-V2-Lite Q4_K_M | 8 GB | Great coding, larger context |
+| Qwen2.5-Coder-14B Q4_K_M | 12 GB | Excellent, needs more VRAM |
+| Qwen2.5-Coder-32B Q4_K_M | 24 GB | State-of-the-art, slowest |
+
 ### Vulkan not found
 ```bash
 sudo pacman -S vulkan-radeon vulkan-icd-loader vulkan-tools
@@ -208,6 +223,16 @@ vulkaninfo --summary | grep deviceName
 
 ### "Out of memory" when loading model
 Try a smaller model or a more aggressive quantization (Q3_K_M or Q2_K).
+
+### Port 8080 already in use
+The installer auto-detects this and switches to a free port. If running manually:
+```bash
+# Check what's using the port
+ss -tlnp sport = :8080
+
+# Use a different port
+./llama-server --model model.gguf --port 8081
+```
 
 ### SteamOS after-system-update issues
 Run the fix script:
