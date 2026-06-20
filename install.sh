@@ -3,7 +3,15 @@
 # One command to set up a local LLM + OpenCode + Web UI
 # Usage: bash install.sh [--method binary|source|docker] [--no-webui] [--help]
 
+# Ensure we're running in bash, even if sourced from fish/zsh/etc.
+if [[ -z "${BASH_VERSION:-}" ]]; then
+  echo "Re-execing in bash..." >&2
+  exec bash "$0" "$@"
+fi
+
 set -euo pipefail
+
+trap 'echo -e "${RIO_RED}✘ Script failed at line $LINENO${RIO_RESET}" >&2' ERR
 
 # ─── Configuration ──────────────────────────────────────────────────────
 RIO_HOME="${RIO_HOME:-$HOME/rio-lab}"
@@ -218,10 +226,26 @@ fi
 # ─── Verify Setup ─────────────────────────────────────────────────────
 log_step "Verification"
 
+# Check for port conflicts and find a free port
+RIO_PORT="${RIO_PORT:-8080}"
+if port_in_use "$RIO_PORT"; then
+  log_warning "Port $RIO_PORT is already in use"
+  new_port=$(find_free_port "$RIO_PORT" 9000) || {
+    log_error "No free port available"
+    exit 1
+  }
+  log_info "Switching to port $new_port"
+  RIO_PORT="$new_port"
+  export RIO_PORT
+  # Update config files with new port
+  sed -i "s|RIO_PORT=.*|RIO_PORT=\"$RIO_PORT\"|" "$RIO_HOME/config/rio.env" 2>/dev/null || true
+  sed -i "s|LOCAL_ENDPOINT=.*|LOCAL_ENDPOINT=\"http://127.0.0.1:$RIO_PORT/v1\"|" "$RIO_HOME/config/rio.env" 2>/dev/null || true
+fi
+
 if [[ -n "${RIO_MODEL_PATH:-}" ]] && [[ -f "$RIO_MODEL_PATH" ]]; then
   log_info "Starting llama-server to verify setup..."
   "$RIO_LLAMA_SERVER" --model "$RIO_MODEL_PATH" \
-    --host 127.0.0.1 --port 8080 \
+    --host 127.0.0.1 --port "$RIO_PORT" \
     --n-gpu-layers 999 \
     --ctx-size 2048 \
     --temp 0.6 \
@@ -229,8 +253,8 @@ if [[ -n "${RIO_MODEL_PATH:-}" ]] && [[ -f "$RIO_MODEL_PATH" ]]; then
   server_pid=$!
 
   sleep 2
-  if curl -sf http://127.0.0.1:8080/v1/models > /dev/null 2>&1; then
-    log_success "llama-server is running and responding!"
+  if curl -sf "http://127.0.0.1:$RIO_PORT/v1/models" > /dev/null 2>&1; then
+    log_success "llama-server is running and responding on port $RIO_PORT!"
 
     if command -v opencode &>/dev/null; then
       log_info "Testing OpenCode connection..."
@@ -258,7 +282,7 @@ echo ""
 echo -e "${RIO_BOLD}Your local AI lab is ready!${RIO_RESET}"
 echo ""
 echo "  📍  llama-server endpoint: http://127.0.0.1:8080/v1"
-echo "  💬  Chat UI:               http://127.0.0.1:8080"
+echo "  💬  Chat UI:               http://127.0.0.1:$RIO_PORT"
 echo "  🤖  Model:                 $RIO_SUGGESTED_MODEL_NAME"
 echo "  ⌨️   OpenCode:             $(opencode --version 2>/dev/null || echo 'installed')"
 echo ""
@@ -270,7 +294,7 @@ echo "  2. Use OpenCode:"
 echo "     opencode"
 echo ""
 echo "  3. Use the web UI:"
-echo "     Open http://127.0.0.1:8080 in your browser"
+echo "     Open http://127.0.0.1:$RIO_PORT in your browser"
 echo ""
 if [[ -d "$RIO_HOME/webui" ]]; then
   echo "  4. Open WebUI:"

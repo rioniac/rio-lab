@@ -6,6 +6,11 @@
 # Sets: RIO_SUGGESTED_MODEL, RIO_SUGGESTED_MODEL_NAME, RIO_SUGGESTED_QUANT
 #       RIO_AVAILABLE_MODELS (array of choices)
 
+if [[ -z "${BASH_VERSION:-}" ]]; then
+  echo "Error: This script requires bash. Run with: bash $0" >&2
+  exit 1
+fi
+
 set -euo pipefail
 
 suggest_model() {

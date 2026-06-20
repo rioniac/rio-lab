@@ -2,6 +2,11 @@
 # Rio Lab — create-service.sh
 # Creates a systemd service to auto-start llama-server on boot
 
+if [[ -z "${BASH_VERSION:-}" ]]; then
+  echo "Error: This script requires bash. Run with: bash $0" >&2
+  exit 1
+fi
+
 set -euo pipefail
 
 create_service() {

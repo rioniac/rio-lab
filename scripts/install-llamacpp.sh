@@ -3,6 +3,11 @@
 # Installs llama.cpp with Vulkan GPU support
 # Supports: pre-built binary (fast), source build (optimized), Docker (isolated)
 
+if [[ -z "${BASH_VERSION:-}" ]]; then
+  echo "Error: This script requires bash. Run with: bash $0" >&2
+  exit 1
+fi
+
 set -euo pipefail
 
 install_llamacpp() {
@@ -58,10 +63,11 @@ install_llamacpp_binary() {
 
   # Map arch to GitHub release asset suffix
   local asset_suffix=""
+  local distro="ubuntu"
   case "$arch" in
-    x86_64)  asset_suffix="linux-x64" ;;
-    aarch64) asset_suffix="linux-aarch64" ;;
-    arm64)   asset_suffix="macos-arm64" ;;
+    x86_64)  asset_suffix="x64" ;;
+    aarch64) asset_suffix="arm64" ;;
+    arm64)   asset_suffix="arm64"; distro="macos" ;;
     *)       log_warning "No pre-built binary for $arch, falling back to source build"
              install_llamacpp_source "$install_dir"
              return
@@ -74,26 +80,36 @@ install_llamacpp_binary() {
         | grep '"tag_name"' | cut -d'"' -f4 || echo "master")
   log_debug "Latest release: $tag"
 
-  local filename
-  filename="llama.cpp-${tag}-${asset_suffix}-vulkan.tar.xz"
-  local url="https://github.com/$repo/releases/download/$tag/$filename"
-
-  # Fallback to different naming conventions
+  # Try Vulkan binary first, then CPU-only
   local tmpdir
   tmpdir=$(mktemp -d)
-  if ! download_file "$url" "$tmpdir/llama.tar.xz" "llama.cpp binary" 2>/dev/null; then
-    # Try alternate filename pattern
-    filename="llama-${tag}-${asset_suffix}-vulkan.tar.xz"
-    url="https://github.com/$repo/releases/download/$tag/$filename"
-    if ! download_file "$url" "$tmpdir/llama.tar.xz" "llama.cpp binary" 2>/dev/null; then
-      log_warning "Binary download failed, falling back to source build"
-      rm -rf "$tmpdir"
-      install_llamacpp_source "$install_dir"
-      return
+  local found=false
+  for variant in "vulkan" "cpu"; do
+    local filename="llama-${tag}-bin-${distro}-${variant}-${asset_suffix}.tar.gz"
+    local url="https://github.com/$repo/releases/download/$tag/$filename"
+    log_info "Trying: $filename"
+    if download_file "$url" "$tmpdir/llama.tar.gz" "llama.cpp binary ($variant)" 2>/dev/null; then
+      found=true
+      break
     fi
+  done
+
+  if ! $found; then
+    log_warning "Binary download failed, falling back to source build"
+    rm -rf "$tmpdir"
+    install_llamacpp_source "$install_dir"
+    return
   fi
 
-  tar -xJf "$tmpdir/llama.tar.xz" -C "$tmpdir"
+  log_info "Extracting archive..."
+  tar -xzf "$tmpdir/llama.tar.gz" -C "$tmpdir"
+  local tar_rc=$?
+  if [[ $tar_rc -ne 0 ]]; then
+    log_error "Failed to extract archive"
+    rm -rf "$tmpdir"
+    install_llamacpp_source "$install_dir"
+    return
+  fi
 
   # Find llama-server in extracted files (may be at root or in a subdirectory)
   local server_bin
@@ -134,6 +150,10 @@ install_llamacpp_source() {
     log_info "Updating existing clone..."
     git -C "$install_dir" pull --ff-only 2>/dev/null || true
   else
+    if [[ -d "$install_dir" ]]; then
+      log_warning "Removing stale directory (not a git repo): $install_dir"
+      rm -rf "$install_dir"
+    fi
     log_info "Cloning llama.cpp..."
     git clone --depth 1 "$repo_url" "$install_dir"
     check_previous "Failed to clone llama.cpp"
@@ -176,14 +196,36 @@ install_llamacpp_source() {
   esac
 
   cmake -S "$install_dir" -B "$build_dir" "${cmake_opts[@]}"
-  check_previous "CMake configuration failed"
+  local cmake_rc=$?
+  if [[ $cmake_rc -ne 0 ]]; then
+    log_error "CMake configuration failed"
+    return 1
+  fi
 
   # Build
   local cpus
   cpus=$(get_cpu_count)
   log_info "Building with $cpus threads (this may take a while)..."
   cmake --build "$build_dir" --config Release -j "$cpus"
-  check_previous "Build failed"
+  local build_rc=$?
+  if [[ $build_rc -ne 0 ]]; then
+    if [[ "$backend" == "vulkan" ]]; then
+      log_warning "Vulkan build failed (likely a shader compiler issue), retrying CPU-only..."
+      rm -rf "$build_dir"
+      mkdir -p "$build_dir"
+      cmake -S "$install_dir" -B "$build_dir" -DCMAKE_BUILD_TYPE=Release
+      cmake --build "$build_dir" --config Release -j "$cpus"
+      build_rc=$?
+      if [[ $build_rc -ne 0 ]]; then
+        log_error "Build failed"
+        return 1
+      fi
+      log_success "Build succeeded (CPU-only, no Vulkan)"
+    else
+      log_error "Build failed"
+      return 1
+    fi
+  fi
 }
 
 # ─── Build Dependencies ─────────────────────────────────────────────────

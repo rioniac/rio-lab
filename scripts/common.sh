@@ -2,6 +2,11 @@
 # Rio Lab — common.sh
 # Shared functions: logging, prompting, error handling, system helpers
 
+if [[ -z "${BASH_VERSION:-}" ]]; then
+  echo "Error: This script requires bash. Run with: bash $0" >&2
+  exit 1
+fi
+
 set -euo pipefail
 
 # ─── Colors ────────────────────────────────────────────────────────────
@@ -29,7 +34,7 @@ log_success() { echo -e "${RIO_GREEN}✔${RIO_RESET}  $*"; }
 log_warning() { echo -e "${RIO_YELLOW}⚠${RIO_RESET}  $*"; }
 log_error()   { echo -e "${RIO_RED}✘${RIO_RESET}  $*" >&2; }
 log_step()    { echo -e "\n${RIO_BOLD}${RIO_MAGENTA}━━━ $* ━━━${RIO_RESET}"; }
-log_debug()   { [[ -n "${RIO_DEBUG:-}" ]] && echo -e "${RIO_CYAN}🔍${RIO_RESET}  $*"; }
+log_debug()   { [[ -n "${RIO_DEBUG:-}" ]] && echo -e "${RIO_CYAN}🔍${RIO_RESET}  $*" || true; }
 
 # ─── Error handling ────────────────────────────────────────────────────
 check_previous() {
@@ -127,15 +132,19 @@ download_file() {
   local dest=$2
   local description=${3:-file}
   log_info "Downloading $description..."
+  local rc=0
   if command -v curl &>/dev/null; then
-    curl -#fSL "$url" -o "$dest"
+    curl -#fSL "$url" -o "$dest" || rc=$?
   elif command -v wget &>/dev/null; then
-    wget --show-progress -qO "$dest" "$url"
+    wget --show-progress -qO "$dest" "$url" || rc=$?
   else
     log_error "Neither curl nor wget found"
     return 1
   fi
-  check_previous "Failed to download $description"
+  if [[ $rc -ne 0 ]]; then
+    log_warning "Failed to download $description"
+    return 1
+  fi
 }
 
 # ─── File helpers ──────────────────────────────────────────────────────
@@ -151,6 +160,37 @@ render_template() {
     sed_expr+=(-e "s|{{${key}}}|${value}|g")
   done
   sed "${sed_expr[@]}" "$template" > "$output"
+}
+
+# ─── Port helpers ──────────────────────────────────────────────────────
+port_in_use() {
+  local port=$1
+  if command -v ss &>/dev/null; then
+    ss -tlnp "sport = :$port" 2>/dev/null | grep -q ":$port" && return 0
+  elif command -v lsof &>/dev/null; then
+    lsof -i :"$port" -sTCP:LISTEN &>/dev/null && return 0
+  elif command -v fuser &>/dev/null; then
+    fuser "$port/tcp" &>/dev/null 2>&1 && return 0
+  fi
+  return 1
+}
+
+find_free_port() {
+  local preferred=${1:-8080}
+  local max=${2:-9000}
+  if ! port_in_use "$preferred"; then
+    echo "$preferred"
+    return
+  fi
+  log_warning "Port $preferred is in use"
+  for port in $(seq $((preferred + 1)) "$max"); do
+    if ! port_in_use "$port"; then
+      echo "$port"
+      return
+    fi
+  done
+  log_error "No free port found in range $preferred-$max"
+  return 1
 }
 
 # ─── Header banner ────────────────────────────────────────────────────
@@ -169,4 +209,5 @@ export -f is_root is_linux is_macos is_windows is_wsl has_systemd
 export -f confirm prompt_value
 export -f get_cpu_count get_total_ram_mb get_arch
 export -f download_file render_template
+export -f port_in_use find_free_port
 export -f show_banner

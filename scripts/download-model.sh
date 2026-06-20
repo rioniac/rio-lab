@@ -3,6 +3,11 @@
 # Downloads a GGUF model from HuggingFace
 # Supports: direct curl download, HuggingFace Hub API, or llama.cpp -hf flag
 
+if [[ -z "${BASH_VERSION:-}" ]]; then
+  echo "Error: This script requires bash. Run with: bash $0" >&2
+  exit 1
+fi
+
 set -euo pipefail
 
 download_model() {

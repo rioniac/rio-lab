@@ -2,6 +2,11 @@
 # Rio Lab — configure.sh
 # Generates config files, launcher scripts, and environment setup
 
+if [[ -z "${BASH_VERSION:-}" ]]; then
+  echo "Error: This script requires bash. Run with: bash $0" >&2
+  exit 1
+fi
+
 set -euo pipefail
 
 configure() {
@@ -77,6 +82,21 @@ cleanup() {
 }
 trap cleanup EXIT INT TERM
 
+# Check for port conflicts
+RIO_PORT="${port}"
+if command -v ss &>/dev/null && ss -tlnp "sport = :$RIO_PORT" 2>/dev/null | grep -q ":$RIO_PORT"; then
+  echo "⚠ Port $RIO_PORT is in use. Finding alternative..."
+  for p in \$(seq \$((RIO_PORT + 1)) 9000); do
+    if ! ss -tlnp "sport = :\$p" 2>/dev/null | grep -q ":\$p"; then
+      RIO_PORT=\$p
+      break
+    fi
+  done
+  echo "→ Using port \$RIO_PORT instead"
+  export RIO_PORT
+  export LOCAL_ENDPOINT="http://${host}:\${RIO_PORT}/v1"
+fi
+
 # Start llama-server
 echo "Starting llama-server..."
 echo "Model: \$RIO_MODEL_PATH"
@@ -86,14 +106,14 @@ echo ""
 ${llama_server} \\
   --model "\$RIO_MODEL_PATH" \\
   --host "${host}" \\
-  --port "${port}" \\
+  --port "\$RIO_PORT" \\
   --n-gpu-layers 999 \\
   --ctx-size 8192 \\
   --temp 0.6 \\
   --top-p 0.95 \\
   --top-k 40 \\
   --threads $(get_cpu_count) &
-RIO_SERVER_PID=\$!
+RIO_SERVER_PID=$!
 
 # Wait for server to be ready
 echo -n "Waiting for server"
@@ -104,7 +124,7 @@ for i in \$(seq 1 30); do
     echo "╔══════════════════════════════════════════╗"
     echo "║  Rio Lab is running!                     ║"
     echo "║                                          ║"
-    echo "║  Chat UI:  http://${host}:${port}        ║"
+    echo "║  Chat UI:  http://${host}:\${RIO_PORT}   ║"
     echo "║  API:      \$LOCAL_ENDPOINT               ║"
     echo "╚══════════════════════════════════════════╝"
     echo ""

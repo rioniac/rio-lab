@@ -4,6 +4,11 @@
 # Usage: source scripts/detect-platform.sh
 # Sets: RIO_OS, RIO_DISTRO, RIO_DISTRO_FAMILY, RIO_ARCH, RIO_PKG_MGR, RIO_INIT_SYSTEM
 
+if [[ -z "${BASH_VERSION:-}" ]]; then
+  echo "Error: This script requires bash. Run with: bash $0" >&2
+  exit 1
+fi
+
 set -euo pipefail
 
 detect_platform() {

@@ -2,6 +2,11 @@
 # Rio Lab — verify.sh
 # Tests that the LLM server is running and OpenCode can connect
 
+if [[ -z "${BASH_VERSION:-}" ]]; then
+  echo "Error: This script requires bash. Run with: bash $0" >&2
+  exit 1
+fi
+
 set -euo pipefail
 
 verify() {

@@ -2,6 +2,11 @@
 # Rio Lab — create-steam-launcher.sh
 # Creates a Steam Gaming Mode launcher for Steam Deck / SteamOS
 
+if [[ -z "${BASH_VERSION:-}" ]]; then
+  echo "Error: This script requires bash. Run with: bash $0" >&2
+  exit 1
+fi
+
 set -euo pipefail
 
 create_steam_launcher() {

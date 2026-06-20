@@ -11,6 +11,11 @@
 #   bash scripts/setup-webui.sh --status           # check container status
 #   bash scripts/setup-webui.sh --logs             # tail logs
 
+if [[ -z "${BASH_VERSION:-}" ]]; then
+  echo "Error: This script requires bash. Run with: bash $0" >&2
+  exit 1
+fi
+
 set -euo pipefail
 
 # ─── Config ─────────────────────────────────────────────────────────────
