@@ -17,11 +17,11 @@ Every guide here is built around:
 - ✅ **llama.cpp** — the gold-standard open-source LLM inference engine
 - ✅ **Vulkan GPU backend** — works on AMD, NVIDIA, Intel, and integrated GPUs
 - ✅ **OpenCode** — open-source AI coding agent for your terminal
-- ✅ **Built-in web UI** — llama-server ships a chat UI at `http://localhost:8080`
+- ✅ **Built-in web UI** — llama-server ships a chat UI at `http://localhost:8080` (auto-selects free port if 8080 is in use)
 - ✅ **Optional: Open WebUI** — feature-rich Docker-based chat interface
-- ✅ **Steam Deck tested** — every setup verified on SteamOS
 - ✅ **Dad-friendly** — written for people who love AI, not just developers
 - ✅ **One command install** — `install.sh` handles everything
+- ✅ **Any shell** — works from bash, fish, zsh, or any terminal
 
 ---
 
@@ -31,7 +31,7 @@ I'm a dad who grew up on MMOs. After discovering [Dad's MMO Lab](https://github.
 
 *What if I could do the same for AI?*
 
-Cloud AI is powerful, but it costs money, requires internet, and your data leaves your machine. What if you could run a capable coding assistant entirely locally? On a Steam Deck? On an old laptop? On anything with a GPU?
+Cloud AI is powerful, but it costs money, requires internet, and your data leaves your machine. What if you could run a capable coding assistant entirely locally? On an old laptop? On anything with a GPU?
 
 Turns out — you can. llama.cpp is an engineering marvel that runs on anything from a Raspberry Pi to a Threadripper. Pair it with OpenCode and you've got a fully local AI coding buddy that never phones home.
 
@@ -45,22 +45,16 @@ Turns out — you can. llama.cpp is an engineering marvel that runs on anything 
 |---|---|---|
 | ⚡ **Core: Local LLM Server** | llama.cpp + Vulkan (universal GPU) | ✅ Complete |
 | 🤖 **Coding Agent** | OpenCode CLI → local LLM | ✅ Complete |
-| 💬 **Chat UI (built-in)** | llama-server web UI at `:8080` | ✅ Complete |
+| 💬 **Chat UI (built-in)** | llama-server web UI (port auto-selected) | ✅ Complete |
+| 🖥️ **Open WebUI** | Docker container → llama-server | ✅ Complete |
 | 🤖 **Qwen2.5-Coder model** | GGUF from HuggingFace | ✅ Complete |
 | 🤖 **DeepSeek-Coder model** | GGUF from HuggingFace | ✅ Complete |
 | 🤖 **CodeGemma model** | GGUF from HuggingFace | ✅ Complete |
-
-### 🔥 In Progress
-
-| Component | Method | Status |
-|---|---|---|
-| 🖥️ **Open WebUI** | Docker container → llama-server | 🔨 In Progress |
 
 ### 📋 Planned
 
 | Component | Notes |
 |---|---|
-| 🎮 **Steam Deck Gaming Mode** | Steam launcher + auto-shutdown |
 | 🐳 **Docker-based install** | Pre-built llama.cpp Docker image |
 | 🔄 **Multi-model switching** | Swap models without reconfiguring |
 | 📊 **Model benchmark script** | Measure tokens/sec on your hardware |
@@ -77,7 +71,6 @@ Turns out — you can. llama.cpp is an engineering marvel that runs on anything 
 | `install.ps1` | Windows PowerShell installer |
 | `uninstall.sh` | Clean removal |
 | `uninstall.ps1` | Windows clean removal |
-| `fix-after-update.sh` | Recover after SteamOS update |
 
 ### Detection (`scripts/`)
 
@@ -113,10 +106,9 @@ Turns out — you can. llama.cpp is an engineering marvel that runs on anything 
 
 | Guide | Platform |
 |---|---|
-| `linux/HOWTO-ARCH.md` | Arch Linux, SteamOS, CachyOS |
+| `linux/HOWTO-ARCH.md` | Arch Linux, CachyOS |
 | `linux/HOWTO-DEBIAN.md` | Debian, Ubuntu, Pop!_OS |
-| `linux/HOWTO-FEDORA.md` | Fedora, Bazzite, Nobara |
-| `steam-deck/HOWTO-STEAM-DECK.md` | Steam Deck (SteamOS) |
+| `linux/HOWTO-FEDORA.md` | Fedora, Nobara |
 | `windows/HOWTO-WINDOWS.md` | Windows (native + WSL2) |
 | `opencode/HOWTO-OPENCODE.md` | OpenCode reference guide |
 
@@ -131,7 +123,7 @@ curl -fsSL https://rio-lab.dev/install | bash
 Or, if you've cloned the repo:
 
 ```bash
-chmod +x install.sh && ./install.sh
+bash install.sh
 ```
 
 The installer will:
@@ -158,7 +150,7 @@ Terminal / TUI
       ▼
    OpenCode CLI              ───  "Your AI coding agent"
       │
-      ▼  LOCAL_ENDPOINT=http://localhost:8080/v1
+      ▼  LOCAL_ENDPOINT=http://localhost:PORT/v1
    llama.cpp (llama-server)  ───  "The LLM inference engine"
       │
       ├── GGUF model file    ───  "The AI brain"
@@ -167,11 +159,11 @@ Terminal / TUI
    Web Browser
       │
       ▼
-   http://localhost:8080      ───  "Built-in chat UI"
+   http://localhost:PORT      ───  "Built-in chat UI"
    (or Open WebUI on :3000)
 ```
 
-*(Open WebUI runs in Docker and connects to the same llama-server endpoint.)*
+*(PORT defaults to 8080 but auto-switches if occupied. Open WebUI runs in Docker and connects to the same llama-server endpoint.)*
 
 ---
 
@@ -189,30 +181,6 @@ All models are GGUF-quantized from HuggingFace. The installer downloads them for
 | **Qwen2.5-Coder-32B** Q4_K_M | 16-24 GB | State-of-the-art | Slower |
 
 The installer automatically recommends a model based on your detected VRAM.
-
----
-
-## 🎮 Steam Deck / Bazzite / SteamOS
-
-Play entirely from Steam Gaming Mode — no Desktop Mode needed after setup:
-
-1. The installer creates a **Gaming Mode launcher** in your home folder
-2. Add it to Steam as a Non-Steam game
-3. Launch from your Steam library
-4. The LLM server starts, OpenCode runs in the terminal
-5. Close → **server auto-shuts down**
-
-Full setup in [HOWTO-STEAM-DECK.md](guides/steam-deck/HOWTO-STEAM-DECK.md).
-
----
-
-## 🔧 After a SteamOS Update
-
-```bash
-chmod +x fix-after-update.sh && ./fix-after-update.sh
-```
-
-Rebuilds Vulkan drivers and reinstalls any missing libraries automatically.
 
 ---
 
