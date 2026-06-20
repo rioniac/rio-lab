@@ -27,8 +27,20 @@ while [[ $# -gt 0 ]]; do
     --no-webui) RIO_SKIP_WEBUI=true; shift ;;
     --no-model) RIO_DOWNLOAD_MODEL=false; shift ;;
     --yes) RIO_SKIP_CONFIRM=true; shift ;;
+    --version)
+      if [[ -f "$SCRIPT_DIR/VERSION" ]]; then
+        cat "$SCRIPT_DIR/VERSION"
+      else
+        echo "unknown"
+      fi
+      exit 0
+      ;;
     --help|-h)
-      echo "Rio Lab Installer"
+      _rio_ver="unknown"
+      if [[ -f "$SCRIPT_DIR/VERSION" ]]; then
+        _rio_ver=$(cat "$SCRIPT_DIR/VERSION" | tr -d '[:space:]')
+      fi
+      echo "Rio Lab Installer v$_rio_ver"
       echo "Usage: bash install.sh [options]"
       echo ""
       echo "Options:"
@@ -77,7 +89,7 @@ if ! $RIO_SKIP_CONFIRM; then
 fi
 
 # ─── Step 1: System Prerequisites ───────────────────────────────────────
-log_step "1/7 — System Prerequisites"
+log_step "1/8 — System Prerequisites"
 
 # Check for curl/wget (needed everywhere)
 check_command curl "Install curl: sudo apt install curl (or your distro's equivalent)" || {
@@ -99,7 +111,7 @@ fi
 log_success "Prerequisites check passed"
 
 # ─── Step 2: Hardware Report & Model Selection ────────────────────────
-log_step "2/7 — Hardware Report & Model Selection"
+log_step "2/8 — Hardware Report & Model Selection"
 
 echo -e "${RIO_BOLD}Detected Hardware:${RIO_RESET}"
 echo "  Operating System:  $RIO_OS ($RIO_DISTRO)"
@@ -146,7 +158,7 @@ fi
 export RIO_MODEL_ID
 
 # ─── Step 3: Install llama.cpp ───────────────────────────────────────
-log_step "3/7 — Installing llama.cpp"
+log_step "3/8 — Installing llama.cpp"
 
 # Let user choose install method if not specified
 if [[ -z "${RIO_METHOD_FORCED:-}" ]]; then
@@ -179,27 +191,27 @@ log_success "llama.cpp installed"
 
 # ─── Step 4: Download Model ──────────────────────────────────────────
 if $RIO_DOWNLOAD_MODEL; then
-  log_step "4/7 — Downloading Model ($RIO_SUGGESTED_MODEL_NAME)"
+  log_step "4/8 — Downloading Model ($RIO_SUGGESTED_MODEL_NAME)"
 
   RIO_MODELS_DIR="$RIO_HOME/models"
   source "$SCRIPT_DIR/scripts/download-model.sh"
   download_model "$RIO_SUGGESTED_HF_REPO" "$RIO_SUGGESTED_FILENAME" "$RIO_MODELS_DIR"
   log_success "Model downloaded"
 else
-  log_step "4/7 — Downloading Model"
+  log_step "4/8 — Downloading Model"
   log_info "Skipped (--no-model flag)"
   RIO_MODEL_PATH=""
 fi
 
 # ─── Step 5: Install OpenCode ────────────────────────────────────────
-log_step "5/7 — Installing OpenCode CLI"
+log_step "5/8 — Installing OpenCode CLI"
 
 source "$SCRIPT_DIR/scripts/install-opencode.sh"
 install_opencode
 log_success "OpenCode setup complete"
 
 # ─── Step 6: Configuration & Launcher ─────────────────────────────────
-log_step "6/7 — Configuration"
+log_step "6/8 — Configuration"
 
 source "$SCRIPT_DIR/scripts/configure.sh"
 configure
@@ -207,7 +219,7 @@ log_success "Configuration complete"
 
 # ─── Step 7: Optional Open WebUI ─────────────────────────────────────
 if ! $RIO_SKIP_WEBUI; then
-  log_step "7/7 — Optional: Open WebUI Chat Interface"
+  log_step "7/8 — Optional: Open WebUI Chat Interface"
 
   echo "Open WebUI is a feature-rich chat interface that runs in Docker."
   echo "It connects to your local llama-server for inference."
@@ -221,6 +233,22 @@ if ! $RIO_SKIP_WEBUI; then
     log_info "Skipping Open WebUI. You can set it up later with:"
     log_info "  bash scripts/setup-webui.sh"
   fi
+fi
+
+# ─── Step 8: Systemd Service ──────────────────────────────────────────
+if has_systemd; then
+  log_step "8/8 — Systemd Service (auto-start on boot)"
+
+  if confirm "Would you like to enable llama-server to start on boot?"; then
+    source "$SCRIPT_DIR/scripts/create-service.sh"
+    create_service
+  else
+    log_info "Skipping systemd service. You can set it up later with:"
+    log_info "  bash scripts/create-service.sh"
+  fi
+else
+  log_step "8/8 — Systemd Service"
+  log_info "systemd not detected — skipping service setup"
 fi
 
 # ─── Verify Setup ─────────────────────────────────────────────────────
@@ -237,41 +265,12 @@ if port_in_use "$RIO_PORT"; then
   log_info "Switching to port $new_port"
   RIO_PORT="$new_port"
   export RIO_PORT
-  # Update config files with new port
   sed -i "s|RIO_PORT=.*|RIO_PORT=\"$RIO_PORT\"|" "$RIO_HOME/config/rio.env" 2>/dev/null || true
   sed -i "s|LOCAL_ENDPOINT=.*|LOCAL_ENDPOINT=\"http://127.0.0.1:$RIO_PORT/v1\"|" "$RIO_HOME/config/rio.env" 2>/dev/null || true
 fi
 
-if [[ -n "${RIO_MODEL_PATH:-}" ]] && [[ -f "$RIO_MODEL_PATH" ]]; then
-  log_info "Starting llama-server to verify setup..."
-  "$RIO_LLAMA_SERVER" --model "$RIO_MODEL_PATH" \
-    --host 127.0.0.1 --port "$RIO_PORT" \
-    --n-gpu-layers 999 \
-    --ctx-size 2048 \
-    --temp 0.6 \
-    &>/dev/null &
-  server_pid=$!
-
-  sleep 2
-  if curl -sf "http://127.0.0.1:$RIO_PORT/v1/models" > /dev/null 2>&1; then
-    log_success "llama-server is running and responding on port $RIO_PORT!"
-
-    if command -v opencode &>/dev/null; then
-      log_info "Testing OpenCode connection..."
-      if opencode --version &>/dev/null 2>&1; then
-        log_success "OpenCode is ready!"
-      fi
-    fi
-  else
-    log_warning "llama-server started but didn't respond in time"
-    log_info "Check the logs: $RIO_HOME/llama.cpp/build/bin/"
-  fi
-
-  kill "$server_pid" 2>/dev/null || true
-  wait "$server_pid" 2>/dev/null || true
-else
-  log_info "Skipping server verification (no model downloaded)"
-fi
+source "$SCRIPT_DIR/scripts/verify.sh"
+verify "http://127.0.0.1:$RIO_PORT/v1"
 
 # ─── Success ──────────────────────────────────────────────────────────
 echo ""

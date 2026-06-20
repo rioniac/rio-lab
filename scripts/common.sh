@@ -199,9 +199,17 @@ find_free_port() {
 
 # ─── Header banner ────────────────────────────────────────────────────
 show_banner() {
+  local version=""
+  local script_dir
+  script_dir="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+  if [[ -f "$script_dir/../VERSION" ]]; then
+    version=" v$(cat "$script_dir/../VERSION" | tr -d '[:space:]')"
+  elif [[ -f "$script_dir/VERSION" ]]; then
+    version=" v$(cat "$script_dir/VERSION" | tr -d '[:space:]')"
+  fi
   echo -e "${RIO_MAGENTA}"
   echo '  ╔═══════════════════════════════════════════╗'
-  echo '  ║          🤖  Rio Lab  🤖                  ║'
+  echo "  ║          🤖  Rio Lab${version}  🤖              ║"
   echo '  ║   Local AI that never calls home.         ║'
   echo '  ╚═══════════════════════════════════════════╝'
   echo -e "${RIO_RESET}"
